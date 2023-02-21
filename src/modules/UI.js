@@ -2,26 +2,33 @@
 import Dot from "../assets/images/dot.png"
 
 
-import { createElements } from "./Util";
-import { Player } from "./Game";
+import { createElements, randomNumber } from "./Util";
+import { Player } from "./Board";
 
 const Nav = (() => {
     const navbar = document.querySelector("nav");
+    const banner = navbar.querySelector(".nav-center span")
 
     const setBanner = (turn) => {
-        const banner = navbar.querySelector(".nav-center span")
         return banner.innerHTML = `${turn}'s turn`;
     }
 
-    return { setBanner }
+    const setBannerError = (message, lastPLayer) => {
+        banner.innerHTML = `${message}`;
+        banner.style.color = "maroon";
+        setTimeout(() => {
+            banner.style.color = "green";
+            Nav.setBanner(lastPLayer);
+        }, 700)
+    }
+    
+    return { setBanner, setBannerError }
 })();
-
 
 const renderBoard = (player) => {
     // size of columns and rows
     const SIZE = 10
     const container = createElements("div", { "class": `${player.name}-board` });
-
 
     const assemble = () => {
         [_makeTopLabel(), _makeLeftLabel(), _makeBoard(), _makeBottomLabel()].forEach(i => container.appendChild(i))
@@ -35,7 +42,13 @@ const renderBoard = (player) => {
             const row = createElements("div", { "class": "row", "data-index": `${r}` })
             for (let c = 0; c < playerBoard[r].length; c++) {
                 const boardSqaure = playerBoard[r][c]
-                const square = createElements("div", { "class": "square", "data-index": `${c}`, "data-ship": `${boardSqaure.ship}`, "data-hit": `${boardSqaure.hit}`, "data-player": `${player.name}`})
+                const square = createElements("div", { 
+                    "class": "square", 
+                    "data-index": `${c}`, 
+                    "data-ship": `${boardSqaure.ship}`, 
+                    "data-hit": `${boardSqaure.hit}`, 
+                    "data-player": `${player.name}` 
+                })
                 row.appendChild(square)
             }
             boardContainer.appendChild(row);
@@ -44,34 +57,6 @@ const renderBoard = (player) => {
         return boardContainer
     }
 
-    const playerTurn = (player) => {
-        const board = player === "player" ? document.querySelectorAll(`.computer-board .board .row`) : document.querySelectorAll(`.player-board .board .row`)
-
-        board.forEach((row) => {
-            const squares = row.querySelectorAll(".square");
-            squares.forEach((square) => {
-                square.addEventListener("click", (e) => {
-                    const [rowNum, colNum] = [row.getAttribute("data-index"), e.target.getAttribute("data-index")];
-
-                    if (e.target.getAttribute("data-ship") === "true") {
-                        // console.log("hello")
-                        e.target.style.backgroundColor = "yellow"
-                    } else {
-                        const dot = createElements("span", { "class": "dot" })
-                        e.target.appendChild(dot)
-                        e.target.id += "hit";
-                    }
-                    // if (e.target.getAttribute("data-ship")) {
-                    //     console.log("hello")
-                    // } else {
-                    //     const dot = createElements("span", { "class": "dot" })
-                    //     e.target.appendChild(dot)
-                    //     e.target.id += "hit";
-                    // }
-                })
-            })
-        })
-    }
 
     const _makeTopLabel = () => {
         // returns first 10 chars of alphabet
@@ -117,18 +102,83 @@ const renderBoard = (player) => {
         container.appendChild(newBoard);
     }
 
-    const getBoard = () => {
-        let array = []
-        const rows = container.querySelectorAll(".row");
-        rows.forEach(i => {
-            let squares = [];
-            squares.push(...i.querySelectorAll(".square"));
-            array.push(squares);
-        })
-        return array
-    }
-    return { assemble, getBoard, playerTurn };
+
+    return { assemble};
 }
+
+const playGame = (player, opponent) => {
+    const playerMemory = player.memoryBoard
+    const playerBoard = player.DOMboard
+
+    const compMemory = opponent.memoryBoard
+    const compBoard = opponent.DOMboard
+
+    const playerTurn = () => {
+            const computerBoard = document.querySelectorAll('.computer-board .board .row');
+            computerBoard.forEach(row => {
+                const squares = row.querySelectorAll(".square");
+                squares.forEach(square => {
+                    square.addEventListener("click", (e) => {
+                        if (!checkSquare(e.target)) {
+                            console.log("ALREADY HIT");
+                            Nav.setBannerError("Square was already chosen", playerMemory.name);
+                            return 
+                        }
+                        Nav.setBanner(compMemory.name);
+                        computerTurn();
+                    })
+                })
+
+            })
+      };
+
+
+    const computerTurn = () => {
+        const playerRow = document.querySelectorAll(".player-board .row")
+
+        const openSquares = playerMemory.board.getOpenSquares();
+        const randomOpen = openSquares[Math.floor(Math.random() * openSquares.length)]
+        const domSquare = playerRow[randomOpen.row].querySelectorAll(".square")[randomOpen.col];
+        // using a delay for computers turn
+        setInterval(() => {
+            const code = checkSquare(domSquare)
+            // 2 means a ship was hit so it proceeds with algorithm to try and get the rest of the ship
+            if (code === 2) {
+                console.log("HIT PROCEED WITH ALGORITHM");
+            } else {
+                Nav.setBanner(playerMemory.name);
+            }
+        }, 500)
+    }
+
+
+    const checkSquare = (square) => {
+        const data = {
+            row: square.parentElement.getAttribute('data-index'),
+            col: square.getAttribute('data-index'),
+            hit: square.getAttribute('data-hit'),
+            ship: square.getAttribute('data-ship'),
+        };
+
+        if (data.hit === 'false' && data.ship === "false") {
+            const dot = createElements('span', { class: 'dot' });
+            square.appendChild(dot);
+            compMemory.board.setHit(data.row, data.col);
+            square.setAttribute("data-hit", true);
+            return 1 // no ship
+        } else if (data.ship === "true" && data.hit === "false") {
+            square.setAttribute("data-hit", true);
+            return 2 // ship
+        } else if (data.hit === 'true') {
+            return 0 // false
+        }
+
+        // return true
+    }
+
+    playerTurn();
+}
+
 
 export const displayController = () => {
     const boardContainer = document.querySelector(".board-container");
@@ -136,20 +186,11 @@ export const displayController = () => {
     const player = new Player("player");
     const computer = new Player("computer");
 
-    const playerBoard = renderBoard(player);
-    const computerBoard = renderBoard(computer);
+    const playerBoard = renderBoard(player).assemble();
+    const computerBoard = renderBoard(computer).assemble();
 
-    boardContainer.appendChild(playerBoard.assemble());
-    boardContainer.appendChild(computerBoard.assemble());
+    boardContainer.appendChild(playerBoard);
+    boardContainer.appendChild(computerBoard);
 
-    const Game = () => {
-
-        let turn = player.name;
-
-        Nav.setBanner(turn);
-        playerBoard.playerTurn(turn);
-    }
-
-    Game();
+    playGame({"memoryBoard": player, "DOMboard": playerBoard}, {"memoryBoard": computer, "DOMboard": computerBoard});
 }
-

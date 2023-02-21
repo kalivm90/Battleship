@@ -42,14 +42,26 @@ class Board {
         this._placeShips();
     }
     
+    getOpenSquares = () => {
+        let open = []
+        this.board.forEach((row, index) => {
+            row.forEach(col => {
+                if (!col.hit) {
+                    open.push(col);
+                }
+            })
+        })
+        this._shuffleArray(open)
+        return open;
+    }
+
     getBoard = () => {
         return this.board
     }
 
-    // shuffleBoard = () => {
-    //     console.log(this.board.prettyPrint())
-    //     return new Board();
-    // }
+    setHit = (row, col) => {
+        this.board[row][col].hit = true 
+    }
 
     _makeBoard = () => {
         const SIZE = 10
@@ -144,73 +156,3 @@ class Board {
         })
     }
 }
-
-// const player = new Player("player")
-// const computer = new Player("computer")
-
-
-
-// player.board.prettyPrint();
-// console.log()
-// computer.board.prettyPrint();
-
-// let player =  new Board()
-// player.prettyPrint();
-
-
-
-/* 
-                UNREFRACTED PLACESHIPS
-
-    // _placeShips = () => {
-    //     // loop over ship types
-    //     for (let i = 0; i < 5; i++) {
-    //         const ship = this.ships.shift();
-    //         console.log(ship)
-    //         let placed = false
-
-    //         while(!placed) {
-    //             const row = this._getRandomNum();
-    //             const col = this._getRandomNum();
-    //             this._shuffleArray(this.directions);
-    //             // checks to see if ships are in 1 square radius of random slected square
-    //             if (this._checkSurroundings(row, col)) {
-    //                 // loops through directions array 
-    //                 for (let dir = 0; dir < this.directions.length; dir++) {
-    //                     const newR = row + this.directions[dir][0]
-    //                     const newC = col + this.directions[dir][1]
-    //                     let pass = false
-    //                     if (newR >= 0 && newR < 10 && newC >= 0 && newC < 10 && !this.board[newR][newC].ship) {
-    //                         // loops down the row/col in the current direction checking if squares are on board and they dont contain another ship
-    //                         for (let j = 0; j < ship; j++) {
-    //                             const r = newR + j * this.directions[dir][0]
-    //                             const c = newC + j * this.directions[dir][1]
-    //                             if (r >= 0 && r < 10 && c >= 0 && c < 10 && this._checkSurroundings(r, c)) {
-    //                                 pass = true
-    //                                 continue;
-    //                             } else {
-    //                                 pass = false;
-    //                                 break;
-    //                             }
-    //                         }
-    //                         // if every square in the direction + ship are valid, place ship
-    //                         if (pass) {
-    //                             for (let j = 0; j < ship; j++) {
-    //                                 const r = newR + j * this.directions[dir][0]
-    //                                 const c = newC + j * this.directions[dir][1]
-    //                                 this.board[r][c].ship = true 
-                                    
-    //                             }
-    //                             placed = true
-    //                             break
-    //                         } 
-    //                     }
-    //                 }    
-    //             }
-    //         }
-    //     }
-    // }
-
-
-
-*/
