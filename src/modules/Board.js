@@ -152,7 +152,7 @@ class Board {
 
     prettyPrint = () => {
         this.board.map(row => {
-            console.log(row.map(cell => cell.ship ? "B" : "#").join(""));
+            console.log(row.map(cell => cell.ship ? "B" : cell.hit ? "X" : "#").join(""));
         })
     }
 }
