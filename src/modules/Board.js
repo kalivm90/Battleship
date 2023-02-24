@@ -36,12 +36,32 @@ class Board {
     constructor() {
         this.board = this._makeBoard();   
         this.ships = [5, 4, 3, 3, 2, 2, 1]; 
+        this.totalHits = 20;
         this.shipTotal = 7
         this.directions = [[0, 1], [1, 0], [0, -1], [-1, 0]];
         this.surrounding = [...this.directions, [1, 1], [1, -1], [-1, 1], [-1, -1]]
         this._placeShips();
     }
     
+    /* NOT SURE IF THIS WILL WORK */
+    checkForWin = () => {
+        let count = 0;
+        for (let i = 0; i < this.board.length; i++) {
+            for (let j = 0; j < this.board[i].length; j++) {
+                const square = this.board[i][j]
+                if (square.hit && square.ship) {
+                    count += 1
+                    console.log(square, count);
+                }
+            }
+        }
+
+        if (count === this.totalHits) {
+            return true 
+        }
+        return false
+    }
+
     getOpenSquares = () => {
         let open = []
         this.board.forEach((row, index) => {
@@ -53,6 +73,10 @@ class Board {
         })
         this._shuffleArray(open)
         return open;
+    }
+
+    findSquare =(index) => {
+        return this.board[index[0]][index[1]]
     }
 
     getBoard = () => {

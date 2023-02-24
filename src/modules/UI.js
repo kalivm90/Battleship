@@ -1,9 +1,7 @@
-/* START AI, GETTING ANOTHER TURN WHEN SHIP IS HIT, GAME END LOGIC */
-import Dot from "../assets/images/dot.png"
-
-
+/* GAME END LOGIC */
 import { createElements, randomNumber } from "./Util";
 import { Player } from "./Board";
+import { AI } from "./AI";
 
 const Nav = (() => {
     const navbar = document.querySelector("nav");
@@ -21,8 +19,12 @@ const Nav = (() => {
             Nav.setBanner(lastPLayer);
         }, 700)
     }
+
+    const setBannerWinner = (player) => {
+        banner.innerHTML = `WINNNER ${player.name}`
+    }
     
-    return { setBanner, setBannerError }
+    return { setBanner, setBannerError, setBannerWinner}
 })();
 
 const renderBoard = (player) => {
@@ -80,7 +82,6 @@ const renderBoard = (player) => {
 
     const _makeBottomLabel = () => {
         const container = createElements("div", { "class": "bottom" })
-        console.log(player.name)
         if (player.name === "player") {
             container.innerHTML = `
                 <span>${player.name}'s board</span>
@@ -119,6 +120,8 @@ const playGame = (player, opponent) => {
     const compMemory = opponent.memoryBoard
     const compBoard = opponent.DOMboard
 
+    const ai = AI(playerMemory);
+
     const playerTurn = () => {
             const computerBoard = document.querySelectorAll('.computer-board .board .row');
             
@@ -127,14 +130,15 @@ const playGame = (player, opponent) => {
                 squares.forEach(square => {
                     square.addEventListener("click", (e) => {
                         const check = checkSquare(e.target, compMemory)
-                        if (!check) {
-                            console.log("ALREADY HIT");
+                        if (check === 1) {
+                            playerBoard.hideShuffle();
+                            Nav.setBanner(compMemory.name);
+                            computerTurn();
+                        } else if (check === 0) {
                             Nav.setBannerError("Square was already chosen", playerMemory.name);
-                            return 
+                        } else if (check === 3) {
+                            renderBoard.winner(playerMemory.name)
                         }
-                        playerBoard.hideShuffle();
-                        Nav.setBanner(compMemory.name);
-                        computerTurn();
                     })
                 })
 
@@ -144,22 +148,58 @@ const playGame = (player, opponent) => {
 
     const computerTurn = () => {
         const playerRow = document.querySelectorAll(".player-board .row")
-
         const openSquares = playerMemory.board.getOpenSquares();
-        const randomOpen = openSquares[Math.floor(Math.random() * openSquares.length)]
-        const domSquare = playerRow[randomOpen.row].querySelectorAll(".square")[randomOpen.col];
+
+        let randomOpen, domSquare;
+
+        if (ai.getLastHit().length) {
+            const next = ai.getLastHit().shift()
+            ai.directions.forEach(i => {
+                const r = next[0] + i[0]
+                const c = next[1] + i[1]
+
+                if (r >= 0 && r < 10 && c >= 0 && c < 10 && !playerMemory.board.board[r][c].hit) {
+                    ai.getNextUp().push([r,c]);
+                }
+            })
+
+            if (!ai.getNextUp().shift) {
+                randomOpen = playerMemory.board.findSquare(ai.getNextUp().shift())
+                domSquare = playerRow[randomOpen.row].querySelectorAll(".square")[randomOpen.col];
+            } else {
+                /* RAND */
+                randomOpen = openSquares[Math.floor(Math.random() * openSquares.length)]
+                domSquare = playerRow[randomOpen.row].querySelectorAll(".square")[randomOpen.col];
+            }
+        } else if (ai.getNextUp().length) {
+            const next = ai.getNextUp()
+            randomOpen = playerMemory.board.findSquare(next.shift());
+            domSquare = playerRow[randomOpen.row].querySelectorAll(".square")[randomOpen.col];
+        } else {
+            randomOpen = openSquares[Math.floor(Math.random() * openSquares.length)]
+            domSquare = playerRow[randomOpen.row].querySelectorAll(".square")[randomOpen.col];
+        }
+
+
+        // const randomOpen = openSquares[Math.floor(Math.random() * openSquares.length)]
+        // const domSquare = playerRow[randomOpen.row].querySelectorAll(".square")[randomOpen.col];
+
         // using a delay for computers turn
         setTimeout(() => {
             const code = checkSquare(domSquare, playerMemory)
             // 2 means a ship was hit so it proceeds with algorithm to try and get the rest of the ship
             if (code === 2) {
-                console.log("HIT PROCEED WITH ALGORITHM");
+                ai.addLastHit([randomOpen.row, randomOpen.col])
+                setTimeout(() => {
+                    computerTurn();
+                }, 500)
             } else {
                 Nav.setBanner(playerMemory.name);
             }
         }, 500)
 
     }
+
 
     const setCorners = (row, col, player) => {
         const opponentBoard = (player === "computer") ? compMemory : playerMemory;
@@ -241,6 +281,8 @@ const playGame = (player, opponent) => {
 
 
     const checkSquare = (square, player) => {
+        let exit;
+
         const data = {
             row: Number(square.getAttribute('data-row')),
             col: Number(square.getAttribute('data-col')),
@@ -249,26 +291,33 @@ const playGame = (player, opponent) => {
             player: square.getAttribute("data-player")
         };
 
+
         if (data.hit === 'false' && data.ship === "false") {
             const dot = createElements('span', { class: 'dot' });
             square.appendChild(dot);
             player.board.setHit(data.row, data.col);
             square.setAttribute("data-hit", true);
-            return 1 // no ship
+            // return 1 // no ship
+            exit = 1
         } else if (data.ship === "true" && data.hit === "false") {
             const x = createElements("div", {"class": "x"});
             square.appendChild(x);
             square.setAttribute("data-hit", true);
             player.board.setHit(data.row, data.col);
-
             setCorners(data.row, data.col, data.player);
-
-
-            return 2 // ship
+            // return 2 // ship
+            exit = 2
         } else if (data.hit === 'true') {
-            return 0 // false
+            // return 0 // false
+            exit = 0
         }
 
+        // if (player.board.checkForWin()) {
+        //     exit = 4
+        //     console.log("WIN");
+        // }
+
+        return exit;
         // return true
     }
 
